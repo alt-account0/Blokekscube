@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Blokekscube</title>
+<title>BlokeksCube+</title>
 
 <style>
 body {
@@ -15,17 +15,15 @@ body {
 header {
   position: fixed;
   top: 0;
-  left: 0;
   width: 100%;
   background: #111;
   color: white;
   padding: 8px;
   font-weight: bold;
-  z-index: 10;
 }
 
 #palette {
-  width: 160px;
+  width: 180px;
   background: #eee;
   padding: 60px 10px 10px;
   border-right: 2px solid #ccc;
@@ -41,9 +39,7 @@ header {
   font-weight: bold;
 }
 
-.block:hover {
-  background: #1456c4;
-}
+.block:hover { background: #1456c4; }
 
 #workspace {
   flex: 1;
@@ -52,84 +48,71 @@ header {
   overflow-y: auto;
 }
 
-#controls {
-  position: fixed;
-  bottom: 10px;
-  left: 180px;
-}
-
-button {
-  padding: 8px 12px;
-  margin-right: 5px;
-  font-size: 14px;
-}
+button { padding: 6px; margin: 3px; }
 
 canvas {
   border: 2px solid #333;
   background: white;
 }
 
-#stage {
-  position: fixed;
-  right: 10px;
-  bottom: 10px;
-}
-
-#designer {
-  position: fixed;
-  right: 10px;
-  bottom: 330px;
-  cursor: crosshair;
-}
+#stage { position: fixed; right: 10px; bottom: 10px; }
+#designer { position: fixed; right: 10px; bottom: 330px; cursor: crosshair; }
 
 #designerUI {
   position: fixed;
   right: 10px;
   bottom: 540px;
+  background: #eee;
+  padding: 6px;
 }
 </style>
 </head>
 
 <body>
 
-<header>🧊 BlokeksCube — Visual Block Engine</header>
+<header>🧊 BlokeksCube+ Engine</header>
 
 <div id="palette">
-  <h3>Blocks</h3>
-  <div class="block" draggable="true" data-type="right">Move →</div>
-  <div class="block" draggable="true" data-type="left">Move ←</div>
-  <div class="block" draggable="true" data-type="up">Move ↑</div>
-  <div class="block" draggable="true" data-type="down">Move ↓</div>
+<h3>Blocks</h3>
+
+<div class="block" draggable="true" data-type="right">Move →</div>
+<div class="block" draggable="true" data-type="left">Move ←</div>
+<div class="block" draggable="true" data-type="up">Move ↑</div>
+<div class="block" draggable="true" data-type="down">Move ↓</div>
+<div class="block" draggable="true" data-type="jump">Jump →→</div>
+<div class="block" draggable="true" data-type="reset">Reset</div>
+<div class="block" draggable="true" data-type="wait">Wait</div>
+
+<button onclick="runProgram()">▶ Run</button>
+<button onclick="clearProgram()">Clear</button>
 </div>
 
 <div id="workspace">
-  <h3>Program</h3>
-</div>
-
-<div id="controls">
-  <button onclick="runProgram()">▶ Run</button>
-  <button onclick="clearProgram()">Clear</button>
+<h3>Program</h3>
 </div>
 
 <div id="designerUI">
-  <b>Costume Designer</b><br>
-  <button onclick="applyCostume()">Use Costume</button>
-  <button onclick="clearDesigner()">Clear</button>
+<b>Costume Tools</b><br>
+Color: <input type="color" id="colorPicker" value="#000000"><br>
+Brush: <input type="range" id="brushSize" min="2" max="20" value="6"><br>
+<button onclick="toggleEraser()">Eraser</button>
+<button onclick="applyCostume()">Use Costume</button>
+<button onclick="clearDesigner()">Clear</button>
 </div>
 
 <canvas id="designer" width="200" height="200"></canvas>
 <canvas id="stage" width="300" height="300"></canvas>
 
 <script>
+/* ===== Drag Blocks ===== */
+
 const workspace = document.getElementById("workspace");
 const paletteBlocks = document.querySelectorAll(".block");
-
 let program = [];
 
 paletteBlocks.forEach(block => {
-  block.addEventListener("dragstart", e => {
-    e.dataTransfer.setData("type", block.dataset.type);
-  });
+  block.addEventListener("dragstart", e =>
+    e.dataTransfer.setData("type", block.dataset.type));
 });
 
 workspace.addEventListener("dragover", e => e.preventDefault());
@@ -137,12 +120,11 @@ workspace.addEventListener("dragover", e => e.preventDefault());
 workspace.addEventListener("drop", e => {
   const type = e.dataTransfer.getData("type");
 
-  const newBlock = document.createElement("div");
-  newBlock.className = "block";
-  newBlock.textContent = type;
-  newBlock.dataset.type = type;
+  const el = document.createElement("div");
+  el.className = "block";
+  el.textContent = type;
+  workspace.appendChild(el);
 
-  workspace.appendChild(newBlock);
   program.push({ type });
 });
 
@@ -160,68 +142,88 @@ let sprite = { x: 140, y: 140 };
 let costumeImage = null;
 
 function drawSprite() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.clearRect(0,0,canvas.width,canvas.height);
 
-  if (costumeImage) {
+  if (costumeImage)
     ctx.drawImage(costumeImage, sprite.x, sprite.y, 40, 40);
-  } else {
-    ctx.fillStyle = "#0b3d91";
+  else {
+    ctx.fillStyle="#0b3d91";
     ctx.fillRect(sprite.x, sprite.y, 20, 20);
   }
 }
 
 drawSprite();
 
-function sleep(ms) {
-  return new Promise(r => setTimeout(r, ms));
-}
+function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
 
 async function runProgram() {
-  sprite = { x: 140, y: 140 };
-  drawSprite();
+  sprite = { x:140, y:140 };
 
   for (let cmd of program) {
-    switch (cmd.type) {
-      case "right": sprite.x += 20; break;
-      case "left": sprite.x -= 20; break;
-      case "up": sprite.y -= 20; break;
-      case "down": sprite.y += 20; break;
+
+    switch(cmd.type){
+
+      case "right": sprite.x+=20; break;
+      case "left": sprite.x-=20; break;
+      case "up": sprite.y-=20; break;
+      case "down": sprite.y+=20; break;
+      case "jump": sprite.x+=40; break;
+
+      case "reset":
+        sprite={x:140,y:140};
+        break;
+
+      case "wait":
+        await sleep(600);
+        break;
     }
 
     drawSprite();
-    await sleep(300);
+    await sleep(250);
   }
 }
 
 /* ===== Costume Designer ===== */
 
-const designer = document.getElementById("designer");
-const dctx = designer.getContext("2d");
+const designer=document.getElementById("designer");
+const dctx=designer.getContext("2d");
 
-let drawing = false;
+let drawing=false;
+let eraser=false;
 
-designer.addEventListener("mousedown", () => drawing = true);
-designer.addEventListener("mouseup", () => drawing = false);
-designer.addEventListener("mouseleave", () => drawing = false);
+designer.addEventListener("mousedown",()=>drawing=true);
+designer.addEventListener("mouseup",()=>drawing=false);
+designer.addEventListener("mouseleave",()=>drawing=false);
 
-designer.addEventListener("mousemove", e => {
-  if (!drawing) return;
+designer.addEventListener("mousemove",e=>{
+  if(!drawing) return;
 
-  const rect = designer.getBoundingClientRect();
-  const x = e.clientX - rect.left;
-  const y = e.clientY - rect.top;
+  const rect=designer.getBoundingClientRect();
+  const x=e.clientX-rect.left;
+  const y=e.clientY-rect.top;
 
-  dctx.fillStyle = "black";
-  dctx.fillRect(x, y, 4, 4);
+  const size=document.getElementById("brushSize").value;
+
+  if(eraser){
+    dctx.clearRect(x,y,size,size);
+  } else {
+    dctx.fillStyle=document.getElementById("colorPicker").value;
+    dctx.fillRect(x,y,size,size);
+  }
 });
 
-function applyCostume() {
-  costumeImage = new Image();
-  costumeImage.src = designer.toDataURL();
+function toggleEraser(){
+  eraser=!eraser;
+  alert(eraser?"Eraser ON":"Eraser OFF");
 }
 
-function clearDesigner() {
-  dctx.clearRect(0, 0, designer.width, designer.height);
+function applyCostume(){
+  costumeImage=new Image();
+  costumeImage.src=designer.toDataURL();
+}
+
+function clearDesigner(){
+  dctx.clearRect(0,0,designer.width,designer.height);
 }
 </script>
 
