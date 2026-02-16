@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Blokekscube</title>
+
+<style>
+body {
+  margin: 0;
+  font-family: sans-serif;
+  display: flex;
+  height: 100vh;
+}
+
+#palette {
+  width: 160px;
+  background: #eee;
+  padding: 10px;
+  border-right: 2px solid #ccc;
+}
+
+.block {
+  background: orange;
+  padding: 8px;
+  margin: 6px 0;
+  cursor: grab;
+  border-radius: 6px;
+}
+
+#workspace {
+  flex: 1;
+  padding: 10px;
+  background: #fafafa;
+  overflow-y: auto;
+}
+
+#controls {
+  position: fixed;
+  bottom: 10px;
+  left: 180px;
+}
+
+button {
+  padding: 8px 12px;
+  font-size: 14px;
+}
+
+canvas {
+  border: 2px solid #333;
+  background: white;
+  position: fixed;
+  right: 10px;
+  bottom: 10px;
+}
+</style>
+</head>
+
+<body>
+
+<div id="palette">
+  <h3>Blocks</h3>
+  <div class="block" draggable="true" data-type="move">Move →</div>
+  <div class="block" draggable="true" data-type="left">Move ←</div>
+  <div class="block" draggable="true" data-type="up">Move ↑</div>
+  <div class="block" draggable="true" data-type="down">Move ↓</div>
+</div>
+
+<div id="workspace">
+  <h3>Program</h3>
+</div>
+
+<div id="controls">
+  <button onclick="runProgram()">▶ Run</button>
+  <button onclick="clearProgram()">Clear</button>
+</div>
+
+<canvas id="stage" width="300" height="300"></canvas>
+
+<script>
+const workspace = document.getElementById("workspace");
+const paletteBlocks = document.querySelectorAll(".block");
+
+let program = [];
+
+paletteBlocks.forEach(block => {
+  block.addEventListener("dragstart", e => {
+    e.dataTransfer.setData("type", block.dataset.type);
+  });
+});
+
+workspace.addEventListener("dragover", e => e.preventDefault());
+
+workspace.addEventListener("drop", e => {
+  const type = e.dataTransfer.getData("type");
+
+  const newBlock = document.createElement("div");
+  newBlock.className = "block";
+  newBlock.textContent = type;
+  newBlock.dataset.type = type;
+
+  workspace.appendChild(newBlock);
+
+  program.push({ type });
+});
+
+function clearProgram() {
+  workspace.innerHTML = "<h3>Program</h3>";
+  program = [];
+}
+
+const canvas = document.getElementById("stage");
+const ctx = canvas.getContext("2d");
+
+let sprite = { x: 150, y: 150 };
+
+function drawSprite() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = "blue";
+  ctx.fillRect(sprite.x, sprite.y, 20, 20);
+}
+
+drawSprite();
+
+function sleep(ms) {
+  return new Promise(r => setTimeout(r, ms));
+}
+
+async function runProgram() {
+  sprite = { x: 150, y: 150 };
+  drawSprite();
+
+  for (let cmd of program) {
+    switch (cmd.type) {
+      case "move": sprite.x += 20; break;
+      case "left": sprite.x -= 20; break;
+      case "up": sprite.y -= 20; break;
+      case "down": sprite.y += 20; break;
+    }
+
+    drawSprite();
+    await sleep(300);
+  }
+}
+</script>
+
+</body>
+</html>
