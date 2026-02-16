@@ -12,24 +12,42 @@ body {
   height: 100vh;
 }
 
+header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  background: #111;
+  color: white;
+  padding: 8px;
+  font-weight: bold;
+  z-index: 10;
+}
+
 #palette {
   width: 160px;
   background: #eee;
-  padding: 10px;
+  padding: 60px 10px 10px;
   border-right: 2px solid #ccc;
 }
 
 .block {
-  background: orange;
+  background: #0b3d91;
+  color: white;
   padding: 8px;
   margin: 6px 0;
   cursor: grab;
-  border-radius: 6px;
+  border-radius: 8px;
+  font-weight: bold;
+}
+
+.block:hover {
+  background: #1456c4;
 }
 
 #workspace {
   flex: 1;
-  padding: 10px;
+  padding: 60px 10px 10px;
   background: #fafafa;
   overflow-y: auto;
 }
@@ -42,24 +60,43 @@ body {
 
 button {
   padding: 8px 12px;
+  margin-right: 5px;
   font-size: 14px;
 }
 
 canvas {
   border: 2px solid #333;
   background: white;
+}
+
+#stage {
   position: fixed;
   right: 10px;
   bottom: 10px;
+}
+
+#designer {
+  position: fixed;
+  right: 10px;
+  bottom: 330px;
+  cursor: crosshair;
+}
+
+#designerUI {
+  position: fixed;
+  right: 10px;
+  bottom: 540px;
 }
 </style>
 </head>
 
 <body>
 
+<header>🧊 BlokeksCube — Visual Block Engine</header>
+
 <div id="palette">
   <h3>Blocks</h3>
-  <div class="block" draggable="true" data-type="move">Move →</div>
+  <div class="block" draggable="true" data-type="right">Move →</div>
   <div class="block" draggable="true" data-type="left">Move ←</div>
   <div class="block" draggable="true" data-type="up">Move ↑</div>
   <div class="block" draggable="true" data-type="down">Move ↓</div>
@@ -74,6 +111,13 @@ canvas {
   <button onclick="clearProgram()">Clear</button>
 </div>
 
+<div id="designerUI">
+  <b>Costume Designer</b><br>
+  <button onclick="applyCostume()">Use Costume</button>
+  <button onclick="clearDesigner()">Clear</button>
+</div>
+
+<canvas id="designer" width="200" height="200"></canvas>
 <canvas id="stage" width="300" height="300"></canvas>
 
 <script>
@@ -99,7 +143,6 @@ workspace.addEventListener("drop", e => {
   newBlock.dataset.type = type;
 
   workspace.appendChild(newBlock);
-
   program.push({ type });
 });
 
@@ -108,15 +151,23 @@ function clearProgram() {
   program = [];
 }
 
+/* ===== Stage Engine ===== */
+
 const canvas = document.getElementById("stage");
 const ctx = canvas.getContext("2d");
 
-let sprite = { x: 150, y: 150 };
+let sprite = { x: 140, y: 140 };
+let costumeImage = null;
 
 function drawSprite() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.fillStyle = "blue";
-  ctx.fillRect(sprite.x, sprite.y, 20, 20);
+
+  if (costumeImage) {
+    ctx.drawImage(costumeImage, sprite.x, sprite.y, 40, 40);
+  } else {
+    ctx.fillStyle = "#0b3d91";
+    ctx.fillRect(sprite.x, sprite.y, 20, 20);
+  }
 }
 
 drawSprite();
@@ -126,12 +177,12 @@ function sleep(ms) {
 }
 
 async function runProgram() {
-  sprite = { x: 150, y: 150 };
+  sprite = { x: 140, y: 140 };
   drawSprite();
 
   for (let cmd of program) {
     switch (cmd.type) {
-      case "move": sprite.x += 20; break;
+      case "right": sprite.x += 20; break;
       case "left": sprite.x -= 20; break;
       case "up": sprite.y -= 20; break;
       case "down": sprite.y += 20; break;
@@ -140,6 +191,37 @@ async function runProgram() {
     drawSprite();
     await sleep(300);
   }
+}
+
+/* ===== Costume Designer ===== */
+
+const designer = document.getElementById("designer");
+const dctx = designer.getContext("2d");
+
+let drawing = false;
+
+designer.addEventListener("mousedown", () => drawing = true);
+designer.addEventListener("mouseup", () => drawing = false);
+designer.addEventListener("mouseleave", () => drawing = false);
+
+designer.addEventListener("mousemove", e => {
+  if (!drawing) return;
+
+  const rect = designer.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+
+  dctx.fillStyle = "black";
+  dctx.fillRect(x, y, 4, 4);
+});
+
+function applyCostume() {
+  costumeImage = new Image();
+  costumeImage.src = designer.toDataURL();
+}
+
+function clearDesigner() {
+  dctx.clearRect(0, 0, designer.width, designer.height);
 }
 </script>
 
